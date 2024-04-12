@@ -21,10 +21,10 @@
 		<Nullable>enable</Nullable>
 
 		<!-- Display name -->
-		<ApplicationTitle>th-bl</ApplicationTitle>
+		<ApplicationTitle>Thermal Printer</ApplicationTitle>
 
 		<!-- App Identifier -->
-		<ApplicationId>com.companyname.thbl</ApplicationId>
+		<ApplicationId>com.kp.thbl</ApplicationId>
 
 		<!-- Versions -->
 		<ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
@@ -57,10 +57,15 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="ESCPOS_NET" Version="3.0.0" />
 		<PackageReference Include="Microsoft.Maui.Controls" Version="8.0.20" />
 		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="8.0.20" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.0" />
 		<PackageReference Include="Plugin.BLE" Version="3.0.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Views\" />
 	</ItemGroup>
 
 </Project>
