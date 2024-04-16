@@ -6,6 +6,7 @@ using Plugin.BLE.Abstractions;
 using Plugin.BLE.Abstractions.Contracts;
 using System.Diagnostics;
 using System.Text;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace th_bl
 {
@@ -89,41 +90,54 @@ namespace th_bl
             }
 
             IsBusyIndicator.IsVisible = IsBusyIndicator.IsRunning = !(ScanButton.IsEnabled = true);         // switch off the "Isbusy" indicator
+            await _bluetoothAdapter.DisconnectDeviceAsync(selectedItem);
+
         }
 
         private async Task OnPrint(IDevice device)
         {
             try
             {
-
                 var services = await device.GetServicesAsync();
 
-              
+                // Look for services with names suggesting print functionality (replace with your logic)
+                //var targetServices = services.Where(s => s.Name.Contains("print") || s.Name.Contains("data"));
+
                 foreach (var service in services)
                 {
+                    var characteristics = await service.GetCharacteristicsAsync();
 
-                    Debug.WriteLine("DEBUG SERVICE: " + service.Name);
-
-                    var characterictics = await service.GetCharacteristicsAsync();
-
-                    foreach(var characteristic in characterictics)
+                    foreach (var characteristic in characteristics)
                     {
-                        Debug.WriteLine("DEBUG CHARACTERISTICS :"+ characteristic.Name + " cand read :" + characteristic.CanRead + "  can write :" +  characteristic.CanWrite + " can update " + characteristic.CanUpdate);
+                        // Check for writeable characteristics
+                        if (characteristic.CanWrite)
+                        {
+                            // Build your desired byte array with ESC/POS commands and text (replace with your logic)
+                            byte[] escposData = GetEscPosData(string.Format("service: {0} And characteristic: {1}", service.Name, characteristic.Name)); // Function to build your ESC/POS byte array
 
-
-                        Debug.WriteLine("DEBUG DESCRIPTION :" + await characteristic.GetDescriptorAsync(characteristic.Id));
+                            await characteristic.WriteAsync(escposData);
+                        }
                     }
-
                 }
-
-                await _bluetoothAdapter.DisconnectDeviceAsync(device);
-
             }
             catch (Exception ex)
             {
-
                 await DisplayAlert("Error Imprimiendo", ex.Message, "Entendido");
             }
+        }
+
+        // Function to construct your ESC/POS byte array based on your desired formatting (replace with your logic)
+        byte[] GetEscPosData(string text)
+        {
+            byte[] escposData = new byte[]
+            {
+              0x1B, 0x61, 0x01, // Set center alignment
+              0x1B, 0x21, 0x40, // Enable bold mode
+            }
+            .Concat(Encoding.UTF8.GetBytes(text))
+            .Concat(new byte[] { 0x0A }).ToArray();
+
+            return escposData;
         }
     }
 
