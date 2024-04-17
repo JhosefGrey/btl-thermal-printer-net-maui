@@ -1,12 +1,9 @@
-﻿using ESCPOS_NET;
-using ESCPOS_NET.Emitters;
-using ESCPOS_NET.Utilities;
-using Plugin.BLE;
+﻿using Plugin.BLE;
 using Plugin.BLE.Abstractions;
 using Plugin.BLE.Abstractions.Contracts;
-using System.Diagnostics;
+using System.Globalization;
+using System.Runtime.InteropServices;
 using System.Text;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace th_bl
 {
@@ -100,8 +97,9 @@ namespace th_bl
             {
                 var services = await device.GetServicesAsync();
 
-                // Look for services with names suggesting print functionality (replace with your logic)
-                //var targetServices = services.Where(s => s.Name.Contains("print") || s.Name.Contains("data"));
+                IService serviceSelect = null;
+                ICharacteristic characteristicSelect = null;
+
 
                 foreach (var service in services)
                 {
@@ -109,16 +107,58 @@ namespace th_bl
 
                     foreach (var characteristic in characteristics)
                     {
-                        // Check for writeable characteristics
                         if (characteristic.CanWrite)
                         {
-                            // Build your desired byte array with ESC/POS commands and text (replace with your logic)
-                            byte[] escposData = GetEscPosData(string.Format("service: {0} And characteristic: {1}", service.Name, characteristic.Name)); // Function to build your ESC/POS byte array
-
-                            await characteristic.WriteAsync(escposData);
+                            serviceSelect = service;
+                            characteristicSelect = characteristic;
+                            break;
                         }
                     }
                 }
+
+
+                if (serviceSelect != null && characteristicSelect != null)
+                {
+
+
+                    await characteristicSelect.WriteAsync(new byte[] { 0x0A });
+                    await characteristicSelect.WriteAsync(GetEscPosData());
+                    await characteristicSelect.WriteAsync(Encoding.UTF8.GetBytes("--------------------------------"));
+                    await characteristicSelect.WriteAsync(new byte[] { 0x0A });
+                    await characteristicSelect.WriteAsync(GetEscPosDataRight(DateTime.Now.ToString("dd/MMM/yyyy HH:mm", new CultureInfo("es-ES"))));
+                    await characteristicSelect.WriteAsync(Encoding.UTF8.GetBytes("--------------------------------"));
+                    await characteristicSelect.WriteAsync(new byte[] { 0x0A });
+                    await characteristicSelect.WriteAsync(new byte[] { 0x0A });
+                    await characteristicSelect.WriteAsync(new byte[] { 0x0A });
+                    await characteristicSelect.WriteAsync(GetEscPosDataLeft("Cliente:     Jhosef Reyes"));
+                    await characteristicSelect.WriteAsync(GetEscPosDataLeft("NIT:         107137100"));
+                    await characteristicSelect.WriteAsync(Encoding.UTF8.GetBytes("--------------------------------"));
+                    await characteristicSelect.WriteAsync(new byte[] { 0x0A });
+                    await characteristicSelect.WriteAsync(new byte[] { 0x0A });
+                    await characteristicSelect.WriteAsync(Encoding.UTF8.GetBytes("CANT DESCRIPCION PRECIO   TOTAL"));
+                    await characteristicSelect.WriteAsync(new byte[] { 0x0A });
+                    await characteristicSelect.WriteAsync(Encoding.UTF8.GetBytes("0.73 REGGULAR AS 34.19    25.00"));
+                    await characteristicSelect.WriteAsync(new byte[] { 0x0A });
+
+                    await characteristicSelect.WriteAsync(Encoding.UTF8.GetBytes("--------------------------------"));
+                    await characteristicSelect.WriteAsync(new byte[] { 0x0A });
+                    await characteristicSelect.WriteAsync(GetEscPosDataRight("TOTAL   25.00"));
+                    await characteristicSelect.WriteAsync(new byte[] { 0x0A });
+                    await characteristicSelect.WriteAsync(new byte[] { 0x0A });
+                    await characteristicSelect.WriteAsync(new byte[] { 0x0A });
+                    await characteristicSelect.WriteAsync(GetEscPosDataCenter("IMPUESTO IDP 3.36"));
+                    await characteristicSelect.WriteAsync(new byte[] { 0x0A });
+                    await characteristicSelect.WriteAsync(new byte[] { 0x0A });
+                    await characteristicSelect.WriteAsync(new byte[] { 0x0A });
+                    await characteristicSelect.WriteAsync(GetEscPosDataCenter("Numero de Autorizacion:"));
+                    await characteristicSelect.WriteAsync(GetEscPosDataCenter(Guid.NewGuid().ToString()));
+                    await characteristicSelect.WriteAsync(Encoding.UTF8.GetBytes("--------------------------------"));
+                    await characteristicSelect.WriteAsync(new byte[] { 0x0A });
+                    await characteristicSelect.WriteAsync(new byte[] { 0x0A });
+                    await characteristicSelect.WriteAsync(new byte[] { 0x0A });
+
+                }
+
             }
             catch (Exception ex)
             {
@@ -127,18 +167,63 @@ namespace th_bl
         }
 
         // Function to construct your ESC/POS byte array based on your desired formatting (replace with your logic)
-        byte[] GetEscPosData(string text)
+        byte[] GetEscPosData()
         {
+
             byte[] escposData = new byte[]
             {
               0x1B, 0x61, 0x01, // Set center alignment
               0x1B, 0x21, 0x40, // Enable bold mode
+            }
+            .Concat(Encoding.UTF8.GetBytes("Kelpie Solutions"))
+            .Concat(new byte[] { 0x0A })
+            .Concat(new byte[] { 0x0A })
+            .Concat(new byte[] { 0x0A })
+            .Concat(new byte[] { 0x0A }).ToArray();
+
+            return escposData;
+        }
+
+        byte[] GetEscPosDataCenter(string text)
+        {
+
+            byte[] escposData = new byte[]
+            {
+              0x1B, 0x61, 0x01,
             }
             .Concat(Encoding.UTF8.GetBytes(text))
             .Concat(new byte[] { 0x0A }).ToArray();
 
             return escposData;
         }
+
+        byte[] GetEscPosDataLeft(string text)
+        {
+
+            byte[] escposData = new byte[]
+            {
+                0x1B, 0x61, 0x00,
+            }
+            .Concat(Encoding.UTF8.GetBytes(text))
+            .Concat(new byte[] { 0x0A }).ToArray();
+
+            return escposData;
+        }
+
+        byte[] GetEscPosDataRight(string text)
+        {
+            byte[] escposData = new byte[]
+            {
+            // Set right alignment
+            0x1B, 0x61, 0x02
+            }
+            .Concat(Encoding.UTF8.GetBytes(text))
+            .Concat(new byte[] { 0x0A }) // Line Feed character (optional)
+            .ToArray();
+
+            return escposData;
+        }
+
     }
 
 }
